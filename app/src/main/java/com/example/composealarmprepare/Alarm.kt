@@ -14,60 +14,60 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import java.nio.BufferUnderflowException
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 class NotificationReceiver : BroadcastReceiver() {
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onReceive(context: Context, intent: Intent) {
-        sendNotification(context)
+        sendNotification(context, intent)
     }
 
-    private fun sendNotification(context: Context) {
-        val notificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = (100..300).random()
-        val channelId = "alarm_notification"
-        val channel = NotificationChannel(
-            channelId,
-            "Alarm Notification",
-            NotificationManager.IMPORTANCE_HIGH
-        )
-
-        notificationManager.createNotificationChannel(channel)
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun sendNotification(context: Context, intent: Intent) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(context, MainActivity::class.java).putExtra("message", "hello from alarm")
         val pendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            1,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setContentIntent(pendingIntent)
-            .setContentText("Time to listen some music")
-            .setContentTitle("Listen reminder")
-            .setSmallIcon(
-                R.drawable.ic_launcher_foreground
-            ).build()
-        notificationManager.notify(notificationId, notification)
+        val notification =
+            NotificationCompat.Builder(context, alarm_channel)
+                .setContentTitle("Hello")
+                .setContentText("Hello World")
+                .setContentIntent(pendingIntent)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .build()
+
+        manager.notify(1, notification)
+        setExactAlarm(context, intent.getLongExtra("time", AlarmManager.INTERVAL_DAY))
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @SuppressLint("ScheduleExactAlarm")
-fun setExactAlarm(context: Context, triggerTime: Long) {
+fun setExactAlarm(context: Context, triggerTime: Long, cancel: Boolean = false) {
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val intent = Intent(context, NotificationReceiver::class.java)
+
+    val intent = Intent(context, NotificationReceiver::class.java).apply {
+        putExtra("time", triggerTime)
+    }
+
     val pendingIntent = PendingIntent.getBroadcast(
         context,
         0,
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
-
-//    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-    alarmManager.setRepeating(
-        AlarmManager.RTC_WAKEUP,
-        triggerTime,
-        AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-        pendingIntent
-    )
+    if (!cancel) {
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerTime,
+            pendingIntent
+        )
+    } else {
+        alarmManager.cancel(pendingIntent)
+    }
 }
